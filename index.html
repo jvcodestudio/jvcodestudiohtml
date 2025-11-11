@@ -202,31 +202,44 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   });
 });
 
-// AI drag & drop
+// --- AI ehdotukset ---
 function addAISuggestion(name, html){
-  const div=document.createElement('div');
-  div.className='ai-suggestion';
-  div.textContent=name;
-  div.draggable=true;
-  div.dataset.html=html;
-  div.addEventListener('dragstart', e=>{
+  const div = document.createElement('div');
+  div.className = 'ai-suggestion';
+  div.textContent = name;
+  div.draggable = true;
+  div.dataset.html = html;
+
+  // Drag start
+  div.addEventListener('dragstart', e => {
     e.dataTransfer.setData('text/plain', html);
   });
-  div.addEventListener('dblclick', ()=>{
+
+  // Double click popup-preview
+  div.addEventListener('dblclick', () => {
     dragContent.innerHTML = html;
     dragPopup.style.display = 'block';
     overlay.style.display = 'block';
   });
+
   aiDiv.appendChild(div);
 }
 
-addAISuggestion('H1 otsikko','<h1>Otsikko</h1>');
-addAISuggestion('P kappale','<p>Esimerkki tekstiä</p>');
-addAISuggestion('Nappi','<button onclick="console.log(\'Klik!\')">Klikkaa</button>');
-addAISuggestion('Lista','<ul><li>Ensimmäinen</li><li>Toinen</li></ul>');
-addAISuggestion('Taustaväri','<style>body{background-color:lightblue;}</style>');
+// Lisää AI ehdotukset
+addAISuggestion('H1 otsikko', '<h1>Otsikko</h1>');
+addAISuggestion('P kappale', '<p>Esimerkki tekstiä</p>');
+addAISuggestion('Nappi', `
+<button id="btnClick">Klikkaa</button>
+<script>
+(function(){
+  var btn = document.getElementById('btnClick');
+  if(btn){ btn.addEventListener('click', function(){ console.log('Klik!'); }); }
+})();
+<\/script>
+`);
+addAISuggestion('Lista', '<ul><li>Ensimmäinen</li><li>Toinen</li></ul>');
+addAISuggestion('Taustaväri', '<style>body{background-color:lightblue;}</style>');
 addAISuggestion('Popup-nappi', `
-<!-- Popup-nappi -->
 <button id="popupBtn">Näytä popup</button>
 <div id="popupDiv" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
  background:white; border:1px solid #ccc; padding:1rem; border-radius:8px; z-index:1000;">
@@ -234,10 +247,14 @@ addAISuggestion('Popup-nappi', `
   <button onclick="document.getElementById('popupDiv').style.display='none'">Sulje</button>
 </div>
 <script>
-document.getElementById('popupBtn').onclick = function(){
-  document.getElementById('popupDiv').style.display='block';
-};
-</script>
+(function(){
+  var btn = document.getElementById('popupBtn');
+  var popup = document.getElementById('popupDiv');
+  if(btn && popup){
+    btn.addEventListener('click', function(){ popup.style.display = 'block'; });
+  }
+})();
+<\/script>
 `);
 
 // Drop editoriin
