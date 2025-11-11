@@ -19,7 +19,6 @@ body { margin:0; font-family:'Segoe UI', sans-serif; background:var(--bg-light);
 
 header { display:flex; justify-content:space-between; align-items:center; padding:0.5rem 1rem; background:var(--primary); color:white;}
 header h1 { margin:0; font-size:1.2rem; }
-
 .controls { display:flex; gap:0.5rem; }
 .controls button, .controls select, .controls label { background:white; border:none; padding:0.4rem 0.8rem; border-radius:5px; cursor:pointer; color:var(--primary); font-size:0.9rem; }
 .controls label { display:flex; align-items:center; gap:0.3rem; background:none; color:white; }
@@ -35,16 +34,19 @@ header h1 { margin:0; font-size:1.2rem; }
 .tabs button.active { background:var(--primary); color:white; }
 textarea { flex:1; width:100%; border:none; padding:1rem; font-family:monospace; font-size:14px; resize:none; outline:none; background:inherit; color:inherit; }
 iframe { flex:1; border:none; background:white; }
+
 .template-card { background:#fff; border-radius:8px; padding:0.5rem; margin-bottom:1rem; border:1px solid #ccc; cursor:pointer; }
 .dark .template-card { background:#2c2c3d; border-color:#555; }
 .template-card button { margin-top:0.3rem; width:100%; padding:0.3rem; border:none; border-radius:5px; background:var(--primary); color:white; cursor:pointer; }
 .template-preview { font-size:12px; font-family:monospace; background:#f0f0f0; padding:0.3rem; border-radius:4px; overflow:hidden; height:50px; }
 .dark .template-preview { background:#3b3b50; }
+
 .ai-suggestions { width:220px; background:#f0f0f0; padding:0.5rem; overflow-y:auto; }
 .dark .ai-suggestions { background:#3b3b50; }
 .ai-suggestions h3 { margin-top:0; font-size:1rem; }
 .ai-suggestion { margin-bottom:0.5rem; padding:0.3rem; background:white; border-radius:5px; cursor:grab; }
 .dark .ai-suggestion { background:#2c2c3d; }
+
 #projectPopup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; border:1px solid #ccc; padding:1rem; border-radius:8px; z-index:1000; width:300px; }
 #projectPopup.dark { background:#2c2c3d; color:white; border-color:#555; }
 #projectPopup input { width:100%; padding:0.3rem; margin-bottom:0.5rem; }
@@ -57,10 +59,12 @@ iframe { flex:1; border:none; background:white; }
 <header>
   <h1>JV-Studio Code</h1>
   <div class="controls">
+    <button id="newProjectBtn">Uusi projekti</button>
     <button id="runBtn">Run</button>
     <label><input type="checkbox" id="realtime" checked> Reaaliaikainen</label>
     <button id="themeBtn">Vaihda teema</button>
     <button id="projectBtn">Projekti</button>
+    <button id="templatesBtn">Mallipohjat</button>
     <select id="viewMode">
       <option value="full">Kolme välilehteä</option>
       <option value="index">Näytä vain index.html</option>
@@ -100,7 +104,7 @@ iframe { flex:1; border:none; background:white; }
   </div>
 </div>
 
-<script src="templates.js"></script> <!-- Erillinen tiedosto mallipohjille -->
+<script src="templates.js"></script> <!-- Mallipohjat -->
 <script>
 const editor = document.getElementById('editor');
 const preview = document.getElementById('preview');
@@ -108,6 +112,7 @@ const runBtn = document.getElementById('runBtn');
 const realtime = document.getElementById('realtime');
 const themeBtn = document.getElementById('themeBtn');
 const projectBtn = document.getElementById('projectBtn');
+const templatesBtn = document.getElementById('templatesBtn');
 const viewMode = document.getElementById('viewMode');
 const tabsDiv = document.getElementById('tabs');
 const aiDiv = document.getElementById('ai');
@@ -121,26 +126,47 @@ const importProjectBtn = document.getElementById('importProject');
 const closePopupBtn = document.getElementById('closePopup');
 
 let currentTab = 'html';
-let code = {
-  html: '<!DOCTYPE html>\n<html>\n<body>\n<h1>Tervetuloa JV-Studio Codeen!</h1>\n</body>\n</html>',
-  css: 'body { font-family: "Segoe UI", sans-serif; }',
-  js: 'console.log("Tervetuloa!");'
-};
-editor.value = code[currentTab];
+let code = {html:'',css:'',js:''};
 
-// Update preview
+// --- FUNKTIOT ---
+
 function updatePreview(){
   preview.srcdoc = `<style>${code.css}</style>\n${code.html}\n<script>${code.js}<\/script>`;
 }
 
-// Run / input events
+function newProject() {
+  code.html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background:#f0f0f0; padding:1rem; }
+    h1 { color:#4f46e5; }
+    p { color:#333; }
+  </style>
+</head>
+<body>
+  <h1>Tervetuloa JV-Studio Codeen!</h1>
+  <p>Tämä on demo-sivu, voit muokata sisältöä vapaasti.</p>
+</body>
+</html>`;
+  code.css = '';
+  code.js = '';
+  currentTab='html';
+  editor.value = code.html;
+  updatePreview();
+}
+
+// --- ALUSTUS ---
+window.onload = newProject;
+
+// --- EVENTIT ---
+newProjectBtn.addEventListener('click', newProject);
 runBtn.addEventListener('click', updatePreview);
 editor.addEventListener('input', ()=>{
-  code[currentTab] = editor.value;
+  code[currentTab]=editor.value;
   if(realtime.checked) updatePreview();
 });
-
-// Theme toggle
 themeBtn.addEventListener('click', ()=>document.body.classList.toggle('dark'));
 
 // Tabs
@@ -148,19 +174,19 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    code[currentTab] = editor.value;
-    currentTab = btn.dataset.tab;
-    editor.value = code[currentTab];
+    code[currentTab]=editor.value;
+    currentTab=btn.dataset.tab;
+    editor.value=code[currentTab];
   });
 });
 
-// Drag & Drop AI
+// AI drag & drop
 function addAISuggestion(name, html){
-  const div = document.createElement('div');
+  const div=document.createElement('div');
   div.className='ai-suggestion';
-  div.textContent = name;
-  div.draggable = true;
-  div.dataset.html = html;
+  div.textContent=name;
+  div.draggable=true;
+  div.dataset.html=html;
   div.addEventListener('dragstart', e=>{
     e.dataTransfer.setData('text/plain', html);
   });
@@ -177,11 +203,11 @@ addAISuggestion('Popup-nappi','<button onclick="alert(\'Popup esimerkkiteksti\')
 editor.addEventListener('dragover', e=>e.preventDefault());
 editor.addEventListener('drop', e=>{
   e.preventDefault();
-  const html = e.dataTransfer.getData('text/plain');
-  const start = editor.selectionStart;
-  const end = editor.selectionEnd;
-  editor.value = editor.value.slice(0,start)+html+editor.value.slice(end);
-  code[currentTab] = editor.value;
+  const html=e.dataTransfer.getData('text/plain');
+  const start=editor.selectionStart;
+  const end=editor.selectionEnd;
+  editor.value=editor.value.slice(0,start)+html+editor.value.slice(end);
+  code[currentTab]=editor.value;
   if(realtime.checked) updatePreview();
 });
 
@@ -194,27 +220,23 @@ closePopupBtn.addEventListener('click', ()=>{
   overlay.style.display='none';
   projectPopup.style.display='none';
 });
-
-// Export project (JSON)
 exportProjectBtn.addEventListener('click', ()=>{
   const data = JSON.stringify({name:projectNameInput.value||'Projekti', code});
   const blob = new Blob([data], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = (projectNameInput.value||'projekti')+'.json';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(projectNameInput.value||'projekti')+'.json';
   a.click();
 });
-
-// Import project HTML
 importProjectBtn.addEventListener('click', ()=>{
-  const input = document.createElement('input');
+  const input=document.createElement('input');
   input.type='file'; input.accept='.html';
-  input.onchange = e=>{
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = ev=>{
-      code.html = ev.target.result;
-      if(currentTab==='html') editor.value = code.html;
+  input.onchange=e=>{
+    const file=e.target.files[0];
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      code.html=ev.target.result;
+      if(currentTab==='html') editor.value=code.html;
       updatePreview();
       overlay.style.display='none';
       projectPopup.style.display='none';
@@ -229,21 +251,29 @@ viewMode.addEventListener('change', ()=>{
   if(viewMode.value==='index'){
     tabsDiv.style.display='none';
     currentTab='html';
-    editor.value = code.html;
+    editor.value=code.html;
   }else{
     tabsDiv.style.display='flex';
-    editor.value = code[currentTab];
+    editor.value=code[currentTab];
   }
+});
+
+// Mallipohjat-nappi scrollaa sidebarin
+templatesBtn.addEventListener('click', ()=>{
+  const sidebar=document.getElementById('sidebar');
+  sidebar.scrollIntoView({behavior:'smooth'});
+  sidebar.style.border='2px solid var(--primary)';
+  setTimeout(()=> sidebar.style.border='',1000);
 });
 
 // Mallipohjat
 templates.forEach(t=>{
-  const card = document.createElement('div');
+  const card=document.createElement('div');
   card.className='template-card';
-  card.innerHTML = `<div class="template-preview">${t.code.slice(0,200)}...</div><button>Use</button>`;
+  card.innerHTML=`<div class="template-preview">${t.code.slice(0,200)}...</div><button>Use</button>`;
   card.querySelector('button').addEventListener('click', ()=>{
-    code.html = t.code;
-    if(currentTab==='html') editor.value = code.html;
+    code.html=t.code;
+    if(currentTab==='html') editor.value=code.html;
     updatePreview();
   });
   templatesDiv.appendChild(card);
