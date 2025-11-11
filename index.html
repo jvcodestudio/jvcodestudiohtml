@@ -23,7 +23,7 @@ header h1 { margin:0; font-size:1.2rem; }
 .controls select { color:var(--primary); }
 
 .main { display:flex; height:calc(100vh - 50px); }
-.editor-area { flex:1; display:flex; flex-direction:column; }
+.editor-area { flex:1; display:flex; flex-direction:column; position:relative; }
 .tabs { display:flex; background:#ddd; }
 .dark .tabs { background:#333; }
 .tabs button { flex:1; padding:0.5rem; border:none; cursor:pointer; background:transparent; font-weight:bold; }
@@ -31,17 +31,39 @@ header h1 { margin:0; font-size:1.2rem; }
 textarea { flex:1; width:100%; border:none; padding:1rem; font-family:monospace; font-size:14px; resize:none; outline:none; background:inherit; color:inherit; }
 iframe { flex:1; border:none; background:white; }
 
+#fullscreenPreview {
+  position:absolute;
+  bottom:5px; right:5px;
+  padding:0.3rem 0.5rem; font-size:0.8rem;
+  border:none; border-radius:4px; background:var(--primary);
+  color:white; cursor:pointer;
+  z-index:50;
+}
+
 .ai-suggestions { width:220px; background:#f0f0f0; padding:0.5rem; overflow-y:auto; }
 .dark .ai-suggestions { background:#3b3b50; }
 .ai-suggestions h3 { margin-top:0; font-size:1rem; }
 .ai-suggestion { margin-bottom:0.5rem; padding:0.3rem; background:white; border-radius:5px; cursor:grab; }
 .dark .ai-suggestion { background:#2c2c3d; }
 
-#projectPopup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; border:1px solid #ccc; padding:1rem; border-radius:8px; z-index:1000; width:300px; }
+#projectPopup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; border:1px solid #ccc; padding:1.2rem; border-radius:12px; z-index:1000; width:320px; box-shadow:0 8px 16px rgba(0,0,0,0.2);}
 #projectPopup.dark { background:#2c2c3d; color:white; border-color:#555; }
-#projectPopup input { width:100%; padding:0.3rem; margin-bottom:0.5rem; }
-#projectPopup button { padding:0.3rem 0.5rem; margin-right:0.3rem; }
+#projectPopup input { width:100%; padding:0.4rem; margin-bottom:0.7rem; border:1px solid #ccc; border-radius:4px; }
+#projectPopup button { padding:0.4rem 0.6rem; margin-right:0.3rem; border:none; border-radius:5px; background:var(--primary); color:white; cursor:pointer; }
+
 #overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:900; }
+
+.dragPopup {
+  display:none;
+  position:fixed;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  background:white; padding:1rem; border-radius:10px; border:1px solid #ccc;
+  box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:2000;
+  max-width:80%; text-align:center;
+}
+.dragPopup.dark { background:#2c2c3d; color:white; border-color:#555; }
+.dragPopup button { margin-top:0.5rem; padding:0.3rem 0.5rem; border:none; border-radius:4px; background:var(--primary); color:white; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -71,6 +93,7 @@ iframe { flex:1; border:none; background:white; }
     </div>
     <textarea id="editor"></textarea>
     <iframe id="preview"></iframe>
+    <button id="fullscreenPreview">Fullscreen Preview</button>
   </div>
 
   <div class="ai-suggestions" id="ai">
@@ -87,6 +110,11 @@ iframe { flex:1; border:none; background:white; }
     <button id="importProject">Import HTML</button>
     <button id="closePopup">Sulje</button>
   </div>
+</div>
+
+<div id="dragPopup" class="dragPopup">
+  <div id="dragContent"></div>
+  <button id="closeDragPopup">Sulje</button>
 </div>
 
 <script>
@@ -107,6 +135,12 @@ const projectNameInput = document.getElementById('projectName');
 const exportProjectBtn = document.getElementById('exportProject');
 const importProjectBtn = document.getElementById('importProject');
 const closePopupBtn = document.getElementById('closePopup');
+
+const fullscreenBtn = document.getElementById('fullscreenPreview');
+
+const dragPopup = document.getElementById('dragPopup');
+const dragContent = document.getElementById('dragContent');
+const closeDragPopup = document.getElementById('closeDragPopup');
 
 let currentTab = 'html';
 let code = {html:'',css:'',js:''};
@@ -178,14 +212,20 @@ function addAISuggestion(name, html){
   div.addEventListener('dragstart', e=>{
     e.dataTransfer.setData('text/plain', html);
   });
+  div.addEventListener('dblclick', ()=>{
+    dragContent.innerHTML = html;
+    dragPopup.style.display = 'block';
+    overlay.style.display = 'block';
+  });
   aiDiv.appendChild(div);
 }
+
 addAISuggestion('H1 otsikko','<h1>Otsikko</h1>');
 addAISuggestion('P kappale','<p>Esimerkki tekstiä</p>');
-addAISuggestion('Nappi','<button onclick="alert(\'Klik!\')">Klikkaa</button>');
+addAISuggestion('Nappi','<button onclick="console.log(\'Klik!\')">Klikkaa</button>');
 addAISuggestion('Lista','<ul><li>Ensimmäinen</li><li>Toinen</li></ul>');
 addAISuggestion('Taustaväri','<style>body{background-color:lightblue;}</style>');
-addAISuggestion('Popup-nappi','<button onclick="alert(\'Popup esimerkkiteksti\')">Popup</button>');
+addAISuggestion('Popup-nappi','<div style="padding:1rem; background:#eee; border-radius:8px; text-align:center;">Tämä on oma popup!</div>');
 
 // Drop editoriin
 editor.addEventListener('dragover', e=>e.preventDefault());
@@ -249,6 +289,19 @@ viewMode.addEventListener('change', ()=>{
 // Mallipohjat-nappi vie galleriasivulle
 templatesBtn.addEventListener('click', ()=>{
   window.location.href = 'mallipohjat.html';
+});
+
+// Fullscreen preview
+fullscreenBtn.addEventListener('click', ()=>{
+  const newWin = window.open();
+  newWin.document.write(`<style>${code.css}</style>${code.html}<script>${code.js}<\/script>`);
+  newWin.document.close();
+});
+
+// Drag popup
+closeDragPopup.addEventListener('click', ()=>{
+  dragPopup.style.display='none';
+  overlay.style.display='none';
 });
 </script>
 </body>
