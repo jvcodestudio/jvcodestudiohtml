@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JV-Studio Code</title>
+<style>
+:root {
+  --bg-light: #f5f5f5;
+  --bg-dark: #1e1e2f;
+  --text-light: #000;
+  --text-dark: #f5f5f5;
+  --primary: #4f46e5;
+  --sidebar-bg: #e4e4e7;
+  --sidebar-bg-dark: #2c2c3d;
+}
+body { margin:0; font-family:'Segoe UI', sans-serif; background:var(--bg-light); color:var(--text-light); transition:0.3s;}
+.dark { background:var(--bg-dark); color:var(--text-dark); }
+
+header { display:flex; justify-content:space-between; align-items:center; padding:0.5rem 1rem; background:var(--primary); color:white;}
+header h1 { margin:0; font-size:1.2rem; }
+
+.controls { display:flex; gap:0.5rem; }
+.controls button, .controls select, .controls label { background:white; border:none; padding:0.4rem 0.8rem; border-radius:5px; cursor:pointer; color:var(--primary); font-size:0.9rem; }
+.controls label { display:flex; align-items:center; gap:0.3rem; background:none; color:white; }
+.controls select { color:var(--primary); }
+
+.main { display:flex; height:calc(100vh - 50px); }
+.sidebar { width:250px; background:var(--sidebar-bg); padding:1rem; overflow-y:auto; transition:0.3s;}
+.dark .sidebar { background:var(--sidebar-bg-dark); }
+.editor-area { flex:2; display:flex; flex-direction:column; border-right:1px solid #ccc; }
+.tabs { display:flex; background:#ddd; }
+.dark .tabs { background:#333; }
+.tabs button { flex:1; padding:0.5rem; border:none; cursor:pointer; background:transparent; font-weight:bold; }
+.tabs button.active { background:var(--primary); color:white; }
+textarea { flex:1; width:100%; border:none; padding:1rem; font-family:monospace; font-size:14px; resize:none; outline:none; background:inherit; color:inherit; }
+iframe { flex:1; border:none; background:white; }
+.template-card { background:#fff; border-radius:8px; padding:0.5rem; margin-bottom:1rem; border:1px solid #ccc; cursor:pointer; }
+.dark .template-card { background:#2c2c3d; border-color:#555; }
+.template-card button { margin-top:0.3rem; width:100%; padding:0.3rem; border:none; border-radius:5px; background:var(--primary); color:white; cursor:pointer; }
+.template-preview { font-size:12px; font-family:monospace; background:#f0f0f0; padding:0.3rem; border-radius:4px; overflow:hidden; height:50px; }
+.dark .template-preview { background:#3b3b50; }
+.ai-suggestions { width:220px; background:#f0f0f0; padding:0.5rem; overflow-y:auto; }
+.dark .ai-suggestions { background:#3b3b50; }
+.ai-suggestions h3 { margin-top:0; font-size:1rem; }
+.ai-suggestion { margin-bottom:0.5rem; padding:0.3rem; background:white; border-radius:5px; cursor:grab; }
+.dark .ai-suggestion { background:#2c2c3d; }
+#projectPopup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; border:1px solid #ccc; padding:1rem; border-radius:8px; z-index:1000; width:300px; }
+#projectPopup.dark { background:#2c2c3d; color:white; border-color:#555; }
+#projectPopup input { width:100%; padding:0.3rem; margin-bottom:0.5rem; }
+#projectPopup button { padding:0.3rem 0.5rem; margin-right:0.3rem; }
+#overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:900; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>JV-Studio Code</h1>
+  <div class="controls">
+    <button id="runBtn">Run</button>
+    <label><input type="checkbox" id="realtime" checked> Reaaliaikainen</label>
+    <button id="themeBtn">Vaihda teema</button>
+    <button id="projectBtn">Projekti</button>
+    <select id="viewMode">
+      <option value="full">Kolme välilehteä</option>
+      <option value="index">Näytä vain index.html</option>
+    </select>
+  </div>
+</header>
+
+<div class="main">
+  <div class="sidebar" id="sidebar">
+    <h3>Mallipohjat</h3>
+    <div id="templates"></div>
+  </div>
+
+  <div class="editor-area">
+    <div class="tabs" id="tabs">
+      <button class="tab-btn active" data-tab="html">index.html</button>
+      <button class="tab-btn" data-tab="css">style.css</button>
+      <button class="tab-btn" data-tab="js">script.js</button>
+    </div>
+    <textarea id="editor"></textarea>
+    <iframe id="preview"></iframe>
+  </div>
+
+  <div class="ai-suggestions" id="ai">
+    <h3>Koodiehdotuksia</h3>
+  </div>
+</div>
+
+<div id="overlay"></div>
+<div id="projectPopup">
+  <h3>Projektinhallinta</h3>
+  <input type="text" id="projectName" placeholder="Projektin nimi">
+  <div style="text-align:right;">
+    <button id="exportProject">Export</button>
+    <button id="importProject">Import HTML</button>
+    <button id="closePopup">Sulje</button>
+  </div>
+</div>
+
+<script src="templates.js"></script> <!-- Erillinen tiedosto mallipohjille -->
+<script>
+const editor = document.getElementById('editor');
+const preview = document.getElementById('preview');
+const runBtn = document.getElementById('runBtn');
+const realtime = document.getElementById('realtime');
+const themeBtn = document.getElementById('themeBtn');
+const projectBtn = document.getElementById('projectBtn');
+const viewMode = document.getElementById('viewMode');
+const tabsDiv = document.getElementById('tabs');
+const aiDiv = document.getElementById('ai');
+const templatesDiv = document.getElementById('templates');
+
+const overlay = document.getElementById('overlay');
+const projectPopup = document.getElementById('projectPopup');
+const projectNameInput = document.getElementById('projectName');
+const exportProjectBtn = document.getElementById('exportProject');
+const importProjectBtn = document.getElementById('importProject');
+const closePopupBtn = document.getElementById('closePopup');
+
+let currentTab = 'html';
+let code = {
+  html: '<!DOCTYPE html>\n<html>\n<body>\n<h1>Tervetuloa JV-Studio Codeen!</h1>\n</body>\n</html>',
+  css: 'body { font-family: "Segoe UI", sans-serif; }',
+  js: 'console.log("Tervetuloa!");'
+};
+editor.value = code[currentTab];
+
+// Update preview
+function updatePreview(){
+  preview.srcdoc = `<style>${code.css}</style>\n${code.html}\n<script>${code.js}<\/script>`;
+}
+
+// Run / input events
+runBtn.addEventListener('click', updatePreview);
+editor.addEventListener('input', ()=>{
+  code[currentTab] = editor.value;
+  if(realtime.checked) updatePreview();
+});
+
+// Theme toggle
+themeBtn.addEventListener('click', ()=>document.body.classList.toggle('dark'));
+
+// Tabs
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    code[currentTab] = editor.value;
+    currentTab = btn.dataset.tab;
+    editor.value = code[currentTab];
+  });
+});
+
+// Drag & Drop AI
+function addAISuggestion(name, html){
+  const div = document.createElement('div');
+  div.className='ai-suggestion';
+  div.textContent = name;
+  div.draggable = true;
+  div.dataset.html = html;
+  div.addEventListener('dragstart', e=>{
+    e.dataTransfer.setData('text/plain', html);
+  });
+  aiDiv.appendChild(div);
+}
+addAISuggestion('H1 otsikko','<h1>Otsikko</h1>');
+addAISuggestion('P kappale','<p>Esimerkki tekstiä</p>');
+addAISuggestion('Nappi','<button onclick="alert(\'Klik!\')">Klikkaa</button>');
+addAISuggestion('Lista','<ul><li>Ensimmäinen</li><li>Toinen</li></ul>');
+addAISuggestion('Taustaväri','<style>body{background-color:lightblue;}</style>');
+addAISuggestion('Popup-nappi','<button onclick="alert(\'Popup esimerkkiteksti\')">Popup</button>');
+
+// Drop editoriin
+editor.addEventListener('dragover', e=>e.preventDefault());
+editor.addEventListener('drop', e=>{
+  e.preventDefault();
+  const html = e.dataTransfer.getData('text/plain');
+  const start = editor.selectionStart;
+  const end = editor.selectionEnd;
+  editor.value = editor.value.slice(0,start)+html+editor.value.slice(end);
+  code[currentTab] = editor.value;
+  if(realtime.checked) updatePreview();
+});
+
+// Projekti popup
+projectBtn.addEventListener('click', ()=>{
+  overlay.style.display='block';
+  projectPopup.style.display='block';
+});
+closePopupBtn.addEventListener('click', ()=>{
+  overlay.style.display='none';
+  projectPopup.style.display='none';
+});
+
+// Export project (JSON)
+exportProjectBtn.addEventListener('click', ()=>{
+  const data = JSON.stringify({name:projectNameInput.value||'Projekti', code});
+  const blob = new Blob([data], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (projectNameInput.value||'projekti')+'.json';
+  a.click();
+});
+
+// Import project HTML
+importProjectBtn.addEventListener('click', ()=>{
+  const input = document.createElement('input');
+  input.type='file'; input.accept='.html';
+  input.onchange = e=>{
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      code.html = ev.target.result;
+      if(currentTab==='html') editor.value = code.html;
+      updatePreview();
+      overlay.style.display='none';
+      projectPopup.style.display='none';
+    }
+    reader.readAsText(file);
+  };
+  input.click();
+});
+
+// View mode
+viewMode.addEventListener('change', ()=>{
+  if(viewMode.value==='index'){
+    tabsDiv.style.display='none';
+    currentTab='html';
+    editor.value = code.html;
+  }else{
+    tabsDiv.style.display='flex';
+    editor.value = code[currentTab];
+  }
+});
+
+// Mallipohjat
+templates.forEach(t=>{
+  const card = document.createElement('div');
+  card.className='template-card';
+  card.innerHTML = `<div class="template-preview">${t.code.slice(0,200)}...</div><button>Use</button>`;
+  card.querySelector('button').addEventListener('click', ()=>{
+    code.html = t.code;
+    if(currentTab==='html') editor.value = code.html;
+    updatePreview();
+  });
+  templatesDiv.appendChild(card);
+});
+
+updatePreview();
+</script>
+</body>
+</html>
