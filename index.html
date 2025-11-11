@@ -52,18 +52,6 @@ iframe { flex:1; border:none; background:white; }
 #projectPopup button { padding:0.4rem 0.6rem; margin-right:0.3rem; border:none; border-radius:5px; background:var(--primary); color:white; cursor:pointer; }
 
 #overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:900; }
-
-.dragPopup {
-  display:none;
-  position:fixed;
-  top:50%; left:50%;
-  transform:translate(-50%,-50%);
-  background:white; padding:1rem; border-radius:10px; border:1px solid #ccc;
-  box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:2000;
-  max-width:80%; text-align:center;
-}
-.dragPopup.dark { background:#2c2c3d; color:white; border-color:#555; }
-.dragPopup button { margin-top:0.5rem; padding:0.3rem 0.5rem; border:none; border-radius:4px; background:var(--primary); color:white; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -112,11 +100,6 @@ iframe { flex:1; border:none; background:white; }
   </div>
 </div>
 
-<div id="dragPopup" class="dragPopup">
-  <div id="dragContent"></div>
-  <button id="closeDragPopup">Sulje</button>
-</div>
-
 <script>
 const editor = document.getElementById('editor');
 const preview = document.getElementById('preview');
@@ -138,16 +121,12 @@ const closePopupBtn = document.getElementById('closePopup');
 
 const fullscreenBtn = document.getElementById('fullscreenPreview');
 
-const dragPopup = document.getElementById('dragPopup');
-const dragContent = document.getElementById('dragContent');
-const closeDragPopup = document.getElementById('closeDragPopup');
-
 let currentTab = 'html';
-let code = {html:'',css:'',js:''};
+let code = {html:'', css:'', js:''};
 
 // --- FUNKTIOT ---
 function updatePreview(){
-  preview.srcdoc = `<style>${code.css}</style>\n${code.html}\n<script>${code.js}<\/script>`;
+  preview.srcdoc = `<style>${code.css}</style>${code.html}<script>${code.js}<\/script>`;
 }
 
 function newProject() {
@@ -160,20 +139,19 @@ function newProject() {
 <!DOCTYPE html>
 <html>
 <head>
-  <style>
-    body { font-family: 'Segoe UI', sans-serif; background:#f0f0f0; padding:1rem; }
-    h1 { color:#4f46e5; }
-    p { color:#333; }
-  </style>
+<style>
+body{font-family:'Segoe UI',sans-serif;background:#f0f0f0;padding:1rem;}
+h1{color:#4f46e5;}
+p{color:#333;}
+</style>
 </head>
 <body>
-  <h1>Tervetuloa JV-Studio Codeen!</h1>
-  <p>Tämä on demo-sivu, voit muokata sisältöä vapaasti.</p>
+<h1>Tervetuloa JV-Studio Codeen!</h1>
+<p>Tämä on demo-sivu, voit muokata sisältöä vapaasti.</p>
 </body>
 </html>`;
   }
-  code.css = '';
-  code.js = '';
+  code.css=''; code.js='';
   currentTab='html';
   editor.value = code.html;
   updatePreview();
@@ -182,25 +160,25 @@ function newProject() {
 // --- ALUSTUS ---
 window.onload = newProject;
 
-// --- EVENTIT ---
-newProjectBtn.addEventListener('click', newProject);
-runBtn.addEventListener('click', updatePreview);
-editor.addEventListener('input', ()=>{
-  code[currentTab]=editor.value;
-  if(realtime.checked) updatePreview();
-});
-themeBtn.addEventListener('click', ()=>document.body.classList.toggle('dark'));
-
 // Tabs
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    code[currentTab]=editor.value;
-    currentTab=btn.dataset.tab;
-    editor.value=code[currentTab];
+    code[currentTab] = editor.value;
+    currentTab = btn.dataset.tab;
+    editor.value = code[currentTab];
   });
 });
+
+// Editor input
+editor.addEventListener('input', ()=>{
+  code[currentTab]=editor.value;
+  if(realtime.checked) updatePreview();
+});
+
+// Theme
+themeBtn.addEventListener('click', ()=>document.body.classList.toggle('dark'));
 
 // --- AI ehdotukset ---
 function addAISuggestion(name, html){
@@ -209,67 +187,48 @@ function addAISuggestion(name, html){
   div.textContent = name;
   div.draggable = true;
   div.dataset.html = html;
-
-  // Drag start
-  div.addEventListener('dragstart', e => {
+  // Drag start: siirrä editoriin
+  div.addEventListener('dragstart', e=>{
     e.dataTransfer.setData('text/plain', html);
   });
-
-  // Double click popup-preview
-  div.addEventListener('dblclick', () => {
-    dragContent.innerHTML = html;
-    dragPopup.style.display = 'block';
-    overlay.style.display = 'block';
-  });
-
   aiDiv.appendChild(div);
 }
 
-// Lisää AI ehdotukset
+// Esimerkit
 addAISuggestion('H1 otsikko', '<h1>Otsikko</h1>');
 addAISuggestion('P kappale', '<p>Esimerkki tekstiä</p>');
 addAISuggestion('Nappi', `
-<button id="btnClick">Klikkaa</button>
-<script>
-(function(){
-  var btn = document.getElementById('btnClick');
-  if(btn){ btn.addEventListener('click', function(){ console.log('Klik!'); }); }
-})();
-<\/script>
+<button onclick="alert('Klik!')">Klikkaa</button>
 `);
 addAISuggestion('Lista', '<ul><li>Ensimmäinen</li><li>Toinen</li></ul>');
 addAISuggestion('Taustaväri', '<style>body{background-color:lightblue;}</style>');
 addAISuggestion('Popup-nappi', `
 <button id="popupBtn">Näytä popup</button>
-<div id="popupDiv" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
- background:white; border:1px solid #ccc; padding:1rem; border-radius:8px; z-index:1000;">
-  <p>Hello World!</p>
-  <button onclick="document.getElementById('popupDiv').style.display='none'">Sulje</button>
+<div id="popupDiv" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+background:white;border:1px solid #ccc;padding:1rem;border-radius:8px;z-index:1000;">
+<p>Hello World!</p>
+<button onclick="this.parentElement.style.display='none'">Sulje</button>
 </div>
 <script>
-(function(){
-  var btn = document.getElementById('popupBtn');
-  var popup = document.getElementById('popupDiv');
-  if(btn && popup){
-    btn.addEventListener('click', function(){ popup.style.display = 'block'; });
-  }
-})();
-<\/script>
+document.getElementById('popupBtn').onclick=function(){
+  document.getElementById('popupDiv').style.display='block';
+};
+</script>
 `);
 
-// Drop editoriin
+// --- Drag & Drop editoriin ---
 editor.addEventListener('dragover', e=>e.preventDefault());
 editor.addEventListener('drop', e=>{
   e.preventDefault();
-  const html=e.dataTransfer.getData('text/plain');
-  const start=editor.selectionStart;
-  const end=editor.selectionEnd;
-  editor.value=editor.value.slice(0,start)+html+editor.value.slice(end);
-  code[currentTab]=editor.value;
+  const html = e.dataTransfer.getData('text/plain');
+  const start = editor.selectionStart;
+  const end = editor.selectionEnd;
+  editor.value = editor.value.slice(0,start) + html + editor.value.slice(end);
+  code[currentTab] = editor.value;
   if(realtime.checked) updatePreview();
 });
 
-// Projekti popup
+// --- Projekti popup ---
 projectBtn.addEventListener('click', ()=>{
   overlay.style.display='block';
   projectPopup.style.display='block';
@@ -293,45 +252,37 @@ importProjectBtn.addEventListener('click', ()=>{
     const file=e.target.files[0];
     const reader=new FileReader();
     reader.onload=ev=>{
-      code.html=ev.target.result;
-      if(currentTab==='html') editor.value=code.html;
+      code.html = ev.target.result;
+      if(currentTab==='html') editor.value = code.html;
       updatePreview();
       overlay.style.display='none';
       projectPopup.style.display='none';
-    }
+    };
     reader.readAsText(file);
   };
   input.click();
 });
 
-// View mode
+// --- View mode ---
 viewMode.addEventListener('change', ()=>{
   if(viewMode.value==='index'){
     tabsDiv.style.display='none';
     currentTab='html';
-    editor.value=code.html;
-  }else{
+    editor.value = code.html;
+  } else {
     tabsDiv.style.display='flex';
-    editor.value=code[currentTab];
+    editor.value = code[currentTab];
   }
 });
 
-// Mallipohjat-nappi vie galleriasivulle
-templatesBtn.addEventListener('click', ()=>{
-  window.location.href = 'mallipohjat.html';
-});
+// --- Templates ---
+templatesBtn.addEventListener('click', ()=>window.location.href='mallipohjat.html');
 
-// Fullscreen preview
+// --- Fullscreen preview ---
 fullscreenBtn.addEventListener('click', ()=>{
   const newWin = window.open();
   newWin.document.write(`<style>${code.css}</style>${code.html}<script>${code.js}<\/script>`);
   newWin.document.close();
-});
-
-// Drag popup
-closeDragPopup.addEventListener('click', ()=>{
-  dragPopup.style.display='none';
-  overlay.style.display='none';
 });
 </script>
 </body>
