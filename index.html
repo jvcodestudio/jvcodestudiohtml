@@ -225,7 +225,20 @@ addAISuggestion('P kappale','<p>Esimerkki tekstiä</p>');
 addAISuggestion('Nappi','<button onclick="console.log(\'Klik!\')">Klikkaa</button>');
 addAISuggestion('Lista','<ul><li>Ensimmäinen</li><li>Toinen</li></ul>');
 addAISuggestion('Taustaväri','<style>body{background-color:lightblue;}</style>');
-addAISuggestion('Popup-nappi','<div style="padding:1rem; background:#eee; border-radius:8px; text-align:center;">Tämä on oma popup!</div>');
+addAISuggestion('Popup-nappi', `
+<!-- Popup-nappi -->
+<button id="popupBtn">Näytä popup</button>
+<div id="popupDiv" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+ background:white; border:1px solid #ccc; padding:1rem; border-radius:8px; z-index:1000;">
+  <p>Hello World!</p>
+  <button onclick="document.getElementById('popupDiv').style.display='none'">Sulje</button>
+</div>
+<script>
+document.getElementById('popupBtn').onclick = function(){
+  document.getElementById('popupDiv').style.display='block';
+};
+</script>
+`);
 
 // Drop editoriin
 editor.addEventListener('dragover', e=>e.preventDefault());
